@@ -1,3 +1,4 @@
+import json
 import RPi.GPIO as GPIO
 import time
 
@@ -120,4 +121,12 @@ class star(object):
 	    return seq
  
 if __name__ == '__main__':
-    pass
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('file', help='composition file (json)')
+    args = parser.parse_args()
+
+    penta = star()
+    with open(args.file, 'r') as fi:
+        script = json.load(fi)
+    penta.engine(script['composition'])
