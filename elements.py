@@ -1,83 +1,52 @@
-import json
-import RPi.GPIO as GPIO
-import time
-
-GPIO.setmode(GPIO.BOARD)
-
 class led(object):
 
     def __init__(self, pin):
 	self.pin = pin
-	GPIO.setup(self.pin, GPIO.OUT)
-
-	self.clock_rate = 0.01
 
     def on(self, on_time=None):
-	GPIO.output(self.pin, 1)
-	start = time.time()
-	if on_time is not None:
-	    stop = start + on_time
-	else:
-	   return	
-
-	while True:
- 	    time.sleep(self.clock_rate)
-            if stop < time.time():
-	        break
-	GPIO.output(self.pin, 0)
+        if on_time is None:
+            on_time = -1
+        seq = [(on_time, self.pin, [])]
+        return seq
 
     def off(self, off_time=None):
-	GPIO.output(self.pin, 0)
-	start = time.time()
-	if off_time is not None:
-	    stop = start + off_time
+        if off_time is None:
+            off_time = -1
+        seq = [(off_time, [], self.pin)]
+        return seq
+
+    def blink(self, Ncycles=10, high_time=1, low_time=1, end_state=0):
+        seq = []
+        for n in Ncycles:
+            seq.append((high_time, self.pin, []))	
+            seq.append((low_time, [], self.pin))
+        return seq
+
+class polygon(object):
+    """
+    Polygon object where each side is controlled by its own pin.
+        If map is False (default), sequences are generated with edge numbers (0-N).
+        If map is True, sequences are generated with pin numbers specified by pin_map.
+    """
+    def __init__(self, N=10, pin_map=(36,37,32,33,31,29,22,18,16,15), map=False):
+        self.map = map
+        if self.map:
+            self.pin = pin_map
         else:
-	    return	
-
-	while True:
- 	    time.sleep(self.clock_rate)
-	    if stop < time.time():
-	        break
-	GPIO.output(self.pin, 1)
-
-    def blink(self, run_time=None, high=1, low=1, end_state=0):
-	start = time.time()
-	if run_time is not None:
-	    stop = start + run_time
-
-	while True:
-	    self.on(high)
-	    self.off(low)
-	    if run_time is not None: 	
-		if stop < time.time():
-		    break
-	GPIO.output(self.pin, end_state)
-
-class star(object):
-
-    def __init__(self, pin_order=None):
-        if pin_order is None:
-            self.pin = (36,37,32,33,31,29,22,18,16,15)
-        else:
-            self.pin = pin_order
+            self.pin = range(N)
         self.N = len(self.pin)
 
-        for pn in self.pin:
-            GPIO.setup(pn, GPIO.OUT)
+    def on(self, on_time=None):
+        if on_time is None:
+            on_time = -1
+        seq = [(on_time, self.pin, [])
+        return seq
 
-    def engine(self, seq):
-        for d in seq:
-            if d[1] != []:
-                GPIO.output([self.pin[p] for p in d[1]], 1)
-            if d[2] != []:
-                GPIO.output([self.pin[p] for p in d[2]], 0)
-            time.sleep(d[0])
-
-    def on(self):
-        GPIO.output(self.pin, 1)
-
-    def off(self):
-        GPIO.output(self.pin, 0)
+    def off(self, off_time=None):
+        if off_time is None:
+            off_time = -1
+        seq = [(off_time, [], self.pin)]
+        return seq
 
     def rotate(self, carrier=[0], v=1, s=1, b='on', dt=1, Nsteps=10, run=True):
 	"""
@@ -86,7 +55,7 @@ class star(object):
 	s = step size of rotation
 	dt = time between steps
 	Nsteps = number of steps
-	b = carrier state (on or off)
+	b = carrier state ('on' or 'off')
 	"""
 
 	if v > 0:
@@ -97,29 +66,26 @@ class star(object):
 	seq = []
 
 	C = carrier
-	C_ = [n for n in range(self.N) if n not in C]
+	C_ = [p for p in self.pin if p not in C]
 	if b is 'off':
 	    temp = C
 	    C = C_
 	    C_ = temp
 	seq.append((dt, C, C_))
 
-	def shift(plist):
-	    return [((p + v*s) % self.N) for p in plist]
+	def shift(edges):
+            if map:
+                edges = [self.pin_map.index(p) for p in edges]
+	    new_seq = [((p + v*s) % self.N) for e in edges]
+            if map:
+                new seq = [self.pin_map[e] for e in new_seq]
+            return new_seq    
 
         for rev in range(Nsteps):
 	    C = shift(C)
 	    C_ = shift(C_)
 	    seq.append((dt, C, C_))
-	    print rev
-	    print C
-	    print C_
 	
-	if run:
-            self.engine(seq)
-	else:
-	    return seq
- 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
